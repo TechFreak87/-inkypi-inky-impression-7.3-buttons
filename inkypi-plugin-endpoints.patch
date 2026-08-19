@@ -1,8 +1,18 @@
 diff --git a/src/blueprints/plugin.py b/src/blueprints/plugin.py
-index b7a80d8..53ac193 100644
+index b7a80d8..afeedc3 100644
 --- a/src/blueprints/plugin.py
 +++ b/src/blueprints/plugin.py
-@@ -226,6 +226,171 @@ def display_plugin_instance():
+@@ -221,11 +221,181 @@ def display_plugin_instance():
+             return jsonify({"success": False, "message": f"Plugin instance '{plugin_instance_name}' not found"}), 400
+ 
+         refresh_task.manual_update(PlaylistRefresh(playlist, plugin_instance, force=True))
++
++        # Keep the playlist position in sync after a manual button switch.
++        playlist.current_plugin_index = playlist.plugins.index(plugin_instance)
++        device_config.write_config()
++
+     except Exception as e:
+         return jsonify({"error": f"An error occurred: {str(e)}"}), 500
  
      return jsonify({"success": True, "message": "Display updated"}), 200
  

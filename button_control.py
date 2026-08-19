@@ -50,29 +50,6 @@ def display_plugin(playlist, plugin):
 
     try:
         response = requests.post(
-            f"{BASE_URL}/display_plugin_cached",
-            json=payload,
-            timeout=120,
-        )
-
-        response.raise_for_status()
-
-        print(
-            f"Anzeige aus Cache: {playlist.name} -> {plugin.name}",
-            flush=True,
-        )
-
-    except requests.RequestException as cache_error:
-        print(
-            f"Cache nicht verfuegbar fuer {plugin.name}: {cache_error}",
-            flush=True,
-        )
-        print(
-            "Normaler InkyPi-Refresh wird verwendet.",
-            flush=True,
-        )
-
-        response = requests.post(
             f"{BASE_URL}/display_plugin_instance",
             json=payload,
             timeout=120,
@@ -82,6 +59,12 @@ def display_plugin(playlist, plugin):
 
         print(
             f"Anzeige neu erzeugt: {playlist.name} -> {plugin.name}",
+            flush=True,
+        )
+
+    except requests.RequestException as exc:
+        print(
+            f"InkyPi nicht erreichbar oder Display-Update fehlgeschlagen: {exc}",
             flush=True,
         )
 
