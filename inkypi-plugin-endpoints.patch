@@ -1,0 +1,154 @@
+diff --git a/src/blueprints/plugin.py b/src/blueprints/plugin.py
+index b7a80d8..7b00739 100644
+--- a/src/blueprints/plugin.py
++++ b/src/blueprints/plugin.py
+@@ -226,6 +226,149 @@ def display_plugin_instance():
+ 
+     return jsonify({"success": True, "message": "Display updated"}), 200
+ 
++
++@plugin_bp.route('/shutdown_screen', methods=['POST'])
++def shutdown_screen():
++    device_config = current_app.config['DEVICE_CONFIG']
++    display_manager = current_app.config['DISPLAY_MANAGER']
++
++    try:
++        from PIL import Image, ImageDraw, ImageFont
++
++        width, height = device_config.get_resolution()
++
++        image = Image.new("RGB", (width, height), "white")
++        draw = ImageDraw.Draw(image)
++
++        def load_font(size):
++            candidates = [
++                "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
++                "/usr/share/fonts/truetype/liberation2/LiberationSans-Bold.ttf",
++            ]
++
++            for font_path in candidates:
++                if os.path.exists(font_path):
++                    return ImageFont.truetype(font_path, size)
++
++            return ImageFont.load_default()
++
++        title_font = load_font(58)
++        subtitle_font = load_font(23)
++
++        title = "Shutting down..."
++        subtitle = "Raspberry Pi wird ausgeschaltet"
++
++        title_box = draw.textbbox((0, 0), title, font=title_font)
++        title_width = title_box[2] - title_box[0]
++        title_height = title_box[3] - title_box[1]
++
++        subtitle_box = draw.textbbox((0, 0), subtitle, font=subtitle_font)
++        subtitle_width = subtitle_box[2] - subtitle_box[0]
++
++        center_y = height // 2
++
++        draw.text(
++            ((width - title_width) // 2, center_y - title_height),
++            title,
++            fill="black",
++            font=title_font,
++        )
++
++        draw.text(
++            ((width - subtitle_width) // 2, center_y + 28),
++            subtitle,
++            fill="black",
++            font=subtitle_font,
++        )
++
++        display_manager.display_image(image)
++
++        return jsonify({
++            "success": True,
++            "message": "Shutdown screen displayed"
++        }), 200
++
++    except Exception as e:
++        logger.exception(f"Error displaying shutdown screen: {str(e)}")
++        return jsonify({
++            "success": False,
++            "error": str(e)
++        }), 500
++
++
++
++@plugin_bp.route('/display_plugin_cached', methods=['POST'])
++def display_plugin_cached():
++    device_config = current_app.config['DEVICE_CONFIG']
++    display_manager = current_app.config['DISPLAY_MANAGER']
++    playlist_manager = device_config.get_playlist_manager()
++
++    data = request.json or {}
++
++    playlist_name = data.get("playlist_name")
++    plugin_id = data.get("plugin_id")
++    plugin_instance_name = data.get("plugin_instance")
++
++    try:
++        playlist = playlist_manager.get_playlist(playlist_name)
++
++        if not playlist:
++            return jsonify({
++                "success": False,
++                "message": f"Playlist {playlist_name} not found"
++            }), 400
++
++        plugin_instance = playlist.find_plugin(
++            plugin_id,
++            plugin_instance_name
++        )
++
++        if not plugin_instance:
++            return jsonify({
++                "success": False,
++                "message": f"Plugin instance '{plugin_instance_name}' not found"
++            }), 400
++
++        image_path = os.path.join(
++            device_config.plugin_image_dir,
++            plugin_instance.get_image_path()
++        )
++
++        if not os.path.exists(image_path):
++            return jsonify({
++                "success": False,
++                "message": f"Cached image not found: {image_path}"
++            }), 404
++
++        from PIL import Image
++
++        with Image.open(image_path) as cached:
++            image = cached.convert("RGB")
++
++        display_manager.display_image(image)
++
++        playlist.current_plugin_index = playlist.plugins.index(
++            plugin_instance
++        )
++
++        device_config.write_config()
++
++        return jsonify({
++            "success": True,
++            "message": "Cached image displayed"
++        }), 200
++
++    except Exception as e:
++        logger.exception(
++            f"Error displaying cached plugin image: {str(e)}"
++        )
++
++        return jsonify({
++            "success": False,
++            "error": str(e)
++        }), 500
++
++
+ @plugin_bp.route('/update_now', methods=['POST'])
+ def update_now():
+     device_config = current_app.config['DEVICE_CONFIG']

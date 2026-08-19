@@ -1,0 +1,15 @@
+[Unit]
+Description=InkyPi Button Control
+After=inkypi.service
+Requires=inkypi.service
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/usr/local/inkypi/src
+ExecStart=/usr/local/inkypi/venv_inkypi/bin/python /usr/local/inkypi/button_control.py
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
