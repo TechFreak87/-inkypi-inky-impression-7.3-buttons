@@ -70,11 +70,63 @@ if [ ! -f "$STANDBY_SOURCE" ]; then
 fi
 
 
-echo "[1/8] Python-Abhängigkeiten installieren..."
+echo "[1/9] Python-Abhängigkeiten installieren..."
 "$VENV_DIR/bin/pip" install gpiozero lgpio
 
 echo
-echo "[2/8] Button-Steuerung installieren..."
+echo "[2/9] Pimoroni Inky 2.4.0 sicherstellen..."
+
+"$VENV_DIR/bin/pip" install --upgrade "inky==2.4.0"
+
+E673_DRIVER=$(
+    "$VENV_DIR/bin/python" - <<'PY2'
+import inspect
+import inky.inky_e673
+
+print(inspect.getfile(inky.inky_e673))
+PY2
+)
+
+if [ ! -f "$E673_DRIVER" ]; then
+    echo "FEHLER: E673-Treiber wurde nicht gefunden:"
+    echo "$E673_DRIVER"
+    exit 1
+fi
+
+echo "E673-Treiber:"
+echo "$E673_DRIVER"
+
+echo "Optimiere E673 Command Timing auf 0.05s..."
+
+"$VENV_DIR/bin/python" - "$E673_DRIVER" <<'PY2'
+import sys
+from pathlib import Path
+
+path = Path(sys.argv[1])
+text = path.read_text()
+
+old = """        self._gpio.set_value(self.dc_pin, Value.INACTIVE)
+        time.sleep(0.3)
+        self._spi_bus.xfer3([command])"""
+
+new = """        self._gpio.set_value(self.dc_pin, Value.INACTIVE)
+        time.sleep(0.05)
+        self._spi_bus.xfer3([command])"""
+
+if old in text:
+    text = text.replace(old, new, 1)
+elif "time.sleep(0.05)" in text:
+    pass
+else:
+    raise SystemExit(
+        "E673 Timing-Stelle nicht erkannt. Keine Aenderung vorgenommen."
+    )
+
+path.write_text(text)
+PY2
+
+echo
+echo "[3/9] Button-Steuerung installieren..."
 
 if [ -f "$BUTTON_TARGET" ]; then
     cp "$BUTTON_TARGET" "$BUTTON_TARGET.bak"
@@ -85,7 +137,7 @@ cp "$BUTTON_SOURCE" "$BUTTON_TARGET"
 chmod +x "$BUTTON_TARGET"
 
 echo
-echo "[3/8] Standby-Bild installieren..."
+echo "[4/9] Standby-Bild installieren..."
 
 mkdir -p "$STANDBY_DIR"
 cp "$STANDBY_SOURCE" "$STANDBY_TARGET"
@@ -95,7 +147,7 @@ echo "Standby-Bild installiert:"
 echo "$STANDBY_TARGET"
 
 echo
-echo "[4/8] InkyPi-Endpunkte prüfen..."
+echo "[5/9] InkyPi-Endpunkte prüfen..."
 
 if grep -q "display_plugin_cached" "$PLUGIN_FILE" &&
    grep -q "shutdown_screen" "$PLUGIN_FILE"; then
@@ -123,13 +175,13 @@ else
 fi
 
 echo
-echo "[5/8] Python-Syntax prüfen..."
+echo "[6/9] Python-Syntax prüfen..."
 
 "$VENV_DIR/bin/python" -m py_compile "$BUTTON_TARGET"
 "$VENV_DIR/bin/python" -m py_compile "$PLUGIN_FILE"
 
 echo
-echo "[6/8] systemd-Service installieren..."
+echo "[7/9] systemd-Service installieren..."
 
 cp "$SERVICE_SOURCE" "$SERVICE_TARGET"
 
@@ -137,7 +189,7 @@ systemctl daemon-reload
 systemctl enable inkypi-buttons.service
 
 echo
-echo "[7/8] InkyPi neu starten..."
+echo "[8/9] InkyPi neu starten..."
 
 systemctl restart inkypi.service
 
@@ -145,7 +197,7 @@ echo "Warte auf InkyPi..."
 sleep 20
 
 echo
-echo "[8/8] Button-Service starten..."
+echo "[9/9] Button-Service starten..."
 
 systemctl restart inkypi-buttons.service
 

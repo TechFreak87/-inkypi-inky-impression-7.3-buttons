@@ -97,3 +97,26 @@ Pimoroni Inky Impression 7.3"
 ## License
 
 MIT
+
+## Pimoroni Inky Impression 7.3 Fast Timing
+
+For the 800x480 Pimoroni Inky Impression 7.3 using the E673 driver,
+the installer automatically installs Pimoroni Inky 2.4.0 and applies
+an optimized command delay of 0.05 seconds.
+
+Tested configuration:
+
+- Pimoroni Inky Impression 7.3
+- Resolution: 800x480
+- E673 display driver
+- Pimoroni Inky 2.4.0
+- Command delay: 0.05 seconds
+- Full colour refresh remains enabled
+- Tested without visible artifacts
+
+The optimization only changes the delay between display controller
+commands. The display refresh waveform and voltage settings are not
+modified.
+
+On unsupported display drivers the installer will stop instead of
+applying the E673 modification.
