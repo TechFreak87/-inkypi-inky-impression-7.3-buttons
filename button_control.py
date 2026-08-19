@@ -25,16 +25,19 @@ LONG_PRESS_SECONDS = 3.0
 BASE_URL = "http://127.0.0.1"
 
 
-device_config = Config()
-playlist_manager = device_config.get_playlist_manager()
-
 press_started = {}
 shutdown_started = False
 
 
 def get_active_playlist():
+    # Reload the configuration on every button action so playlist changes
+    # made by the running InkyPi process are picked up immediately.
+    device_config = Config()
+    playlist_manager = device_config.get_playlist_manager()
+
     tz_str = device_config.get_config("timezone", default="UTC")
     now = datetime.now(pytz.timezone(tz_str))
+
     return playlist_manager.determine_active_playlist(now)
 
 
@@ -45,18 +48,42 @@ def display_plugin(playlist, plugin):
         "plugin_instance": plugin.name,
     }
 
-    response = requests.post(
-        f"{BASE_URL}/display_plugin_cached",
-        json=payload,
-        timeout=120,
-    )
+    try:
+        response = requests.post(
+            f"{BASE_URL}/display_plugin_cached",
+            json=payload,
+            timeout=120,
+        )
 
-    response.raise_for_status()
+        response.raise_for_status()
 
-    print(
-        f"Anzeige: {playlist.name} -> {plugin.name}",
-        flush=True,
-    )
+        print(
+            f"Anzeige aus Cache: {playlist.name} -> {plugin.name}",
+            flush=True,
+        )
+
+    except requests.RequestException as cache_error:
+        print(
+            f"Cache nicht verfuegbar fuer {plugin.name}: {cache_error}",
+            flush=True,
+        )
+        print(
+            "Normaler InkyPi-Refresh wird verwendet.",
+            flush=True,
+        )
+
+        response = requests.post(
+            f"{BASE_URL}/display_plugin_instance",
+            json=payload,
+            timeout=120,
+        )
+
+        response.raise_for_status()
+
+        print(
+            f"Anzeige neu erzeugt: {playlist.name} -> {plugin.name}",
+            flush=True,
+        )
 
 
 def previous_plugin():
