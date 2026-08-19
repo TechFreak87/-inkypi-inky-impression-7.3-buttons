@@ -13,6 +13,10 @@ SERVICE_TARGET="/etc/systemd/system/inkypi-buttons.service"
 
 PATCH_FILE="./inkypi-plugin-endpoints.patch"
 
+STANDBY_SOURCE="./assets/inkypi-shutdown-screen-800x480.png"
+STANDBY_DIR="$PROJECT_DIR/assets"
+STANDBY_TARGET="$STANDBY_DIR/inkypi-shutdown-screen-800x480.png"
+
 PLUGIN_FILE="$SRC_DIR/blueprints/plugin.py"
 
 echo "========================================"
@@ -60,11 +64,17 @@ if [ ! -f "$PATCH_FILE" ]; then
     exit 1
 fi
 
-echo "[1/7] Python-Abhängigkeiten installieren..."
+if [ ! -f "$STANDBY_SOURCE" ]; then
+    echo "FEHLER: $STANDBY_SOURCE fehlt."
+    exit 1
+fi
+
+
+echo "[1/8] Python-Abhängigkeiten installieren..."
 "$VENV_DIR/bin/pip" install gpiozero lgpio
 
 echo
-echo "[2/7] Button-Steuerung installieren..."
+echo "[2/8] Button-Steuerung installieren..."
 
 if [ -f "$BUTTON_TARGET" ]; then
     cp "$BUTTON_TARGET" "$BUTTON_TARGET.bak"
@@ -75,7 +85,17 @@ cp "$BUTTON_SOURCE" "$BUTTON_TARGET"
 chmod +x "$BUTTON_TARGET"
 
 echo
-echo "[3/7] InkyPi-Endpunkte prüfen..."
+echo "[3/8] Standby-Bild installieren..."
+
+mkdir -p "$STANDBY_DIR"
+cp "$STANDBY_SOURCE" "$STANDBY_TARGET"
+chmod 644 "$STANDBY_TARGET"
+
+echo "Standby-Bild installiert:"
+echo "$STANDBY_TARGET"
+
+echo
+echo "[4/8] InkyPi-Endpunkte prüfen..."
 
 if grep -q "display_plugin_cached" "$PLUGIN_FILE" &&
    grep -q "shutdown_screen" "$PLUGIN_FILE"; then
@@ -103,13 +123,13 @@ else
 fi
 
 echo
-echo "[4/7] Python-Syntax prüfen..."
+echo "[5/8] Python-Syntax prüfen..."
 
 "$VENV_DIR/bin/python" -m py_compile "$BUTTON_TARGET"
 "$VENV_DIR/bin/python" -m py_compile "$PLUGIN_FILE"
 
 echo
-echo "[5/7] systemd-Service installieren..."
+echo "[6/8] systemd-Service installieren..."
 
 cp "$SERVICE_SOURCE" "$SERVICE_TARGET"
 
@@ -117,7 +137,7 @@ systemctl daemon-reload
 systemctl enable inkypi-buttons.service
 
 echo
-echo "[6/7] InkyPi neu starten..."
+echo "[7/8] InkyPi neu starten..."
 
 systemctl restart inkypi.service
 
@@ -125,7 +145,7 @@ echo "Warte auf InkyPi..."
 sleep 20
 
 echo
-echo "[7/7] Button-Service starten..."
+echo "[8/8] Button-Service starten..."
 
 systemctl restart inkypi-buttons.service
 

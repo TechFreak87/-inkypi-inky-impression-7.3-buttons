@@ -1,8 +1,8 @@
 diff --git a/src/blueprints/plugin.py b/src/blueprints/plugin.py
-index b7a80d8..7b00739 100644
+index b7a80d8..53ac193 100644
 --- a/src/blueprints/plugin.py
 +++ b/src/blueprints/plugin.py
-@@ -226,6 +226,149 @@ def display_plugin_instance():
+@@ -226,6 +226,171 @@ def display_plugin_instance():
  
      return jsonify({"success": True, "message": "Display updated"}), 200
  
@@ -14,11 +14,9 @@ index b7a80d8..7b00739 100644
 +
 +    try:
 +        from PIL import Image, ImageDraw, ImageFont
++        import time
 +
 +        width, height = device_config.get_resolution()
-+
-+        image = Image.new("RGB", (width, height), "white")
-+        draw = ImageDraw.Draw(image)
 +
 +        def load_font(size):
 +            candidates = [
@@ -31,6 +29,10 @@ index b7a80d8..7b00739 100644
 +                    return ImageFont.truetype(font_path, size)
 +
 +            return ImageFont.load_default()
++
++        # 1) Short shutdown status screen
++        image = Image.new("RGB", (width, height), "white")
++        draw = ImageDraw.Draw(image)
 +
 +        title_font = load_font(58)
 +        subtitle_font = load_font(23)
@@ -63,18 +65,38 @@ index b7a80d8..7b00739 100644
 +
 +        display_manager.display_image(image)
 +
++        # Brief pause before replacing it with the permanent standby image.
++        time.sleep(1)
++
++        # 2) Permanent standby image
++        standby_path = "/usr/local/inkypi/assets/inkypi-shutdown-screen-800x480.png"
++
++        if not os.path.exists(standby_path):
++            return jsonify({
++                "success": False,
++                "error": f"Standby image not found: {standby_path}"
++            }), 500
++
++        with Image.open(standby_path) as standby:
++            standby_image = standby.convert("RGB")
++
++        if standby_image.size != (width, height):
++            standby_image = standby_image.resize((width, height))
++
++        display_manager.display_image(standby_image)
++
 +        return jsonify({
 +            "success": True,
-+            "message": "Shutdown screen displayed"
++            "message": "Shutdown and standby screens displayed"
 +        }), 200
 +
 +    except Exception as e:
 +        logger.exception(f"Error displaying shutdown screen: {str(e)}")
++
 +        return jsonify({
 +            "success": False,
 +            "error": str(e)
 +        }), 500
-+
 +
 +
 +@plugin_bp.route('/display_plugin_cached', methods=['POST'])
