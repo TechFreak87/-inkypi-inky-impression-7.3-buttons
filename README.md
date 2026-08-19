@@ -22,6 +22,28 @@ GPIO mapping:
 - C: GPIO 16
 - D: GPIO 24
 
+## Quick installation
+
+Clone this repository on your InkyPi Raspberry Pi and run:
+
+    sudo ./install.sh
+
+The installer automatically:
+
+- checks the InkyPi installation
+- installs gpiozero and lgpio
+- installs the button controller
+- applies the required InkyPi endpoints
+- installs and enables the systemd service
+- restarts InkyPi
+- starts the button service
+
+Normal InkyPi playlist automation remains active.
+
+To remove the extension:
+
+    sudo ./uninstall.sh
+
 ## Requirements
 
 - InkyPi
